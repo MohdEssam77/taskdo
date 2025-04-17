@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .todo-form {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .todo-list {
+            list-style: none;
+            padding: 0;
+        }
+        .todo-item {
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .filters {
+            margin-bottom: 20px;
+        }
+        .edit-form {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        .button-group {
+            margin-top: 10px;
+        }
+        .button-group button {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Todo App</h1>
+
+    <div class="todo-form">
+        <h2>Add New Todo</h2>
+        <form id="todoForm">
+            <div>
+                <label for="title">Title:</label>
+                <input type="text" id="title" required minlength="3">
+            </div>
+            <div>
+                <label for="description">Description:</label>
+                <textarea id="description" required></textarea>
+            </div>
+            <div>
+                <label for="priority">Priority:</label>
+                <select id="priority">
+                    <option value="1">High</option>
+                    <option value="2">Medium</option>
+                    <option value="3">Low</option>
+                </select>
+            </div>
+            <div>
+                <label for="area">Area:</label>
+                <select id="area">
+                    <option value="sports">Sports</option>
+                    <option value="university">University</option>
+                    <option value="life">Life</option>
+                    <option value="work">Work</option>
+                </select>
+            </div>
+            <div>
+                <label for="deadline">Deadline:</label>
+                <input type="date" id="deadline" required>
+            </div>
+            <button type="submit">Add Todo</button>
+        </form>
+    </div>
+
+    <div class="filters">
+        <h2>Filters</h2>
+        <div>
+            <label for="filterDeadline">Filter by Deadline:</label>
+            <input type="date" id="filterDeadline">
+            <button onclick="filterByDeadline()">Filter</button>
+        </div>
+        <div>
+            <label for="filterArea">Filter by Area:</label>
+            <select id="filterArea">
+                <option value="">All</option>
+                <option value="sports">Sports</option>
+                <option value="university">University</option>
+                <option value="life">Life</option>
+                <option value="work">Work</option>
+            </select>
+            <button onclick="filterByArea()">Filter</button>
+        </div>
+    </div>
+
+    <div>
+        <h2>Todo List</h2>
+        <ul id="todoList" class="todo-list"></ul>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        // Load todos when page loads
+        document.addEventListener('DOMContentLoaded', loadTodos);
+
+        async function loadTodos() {
+            try {
+                const response = await fetch(`${API_URL}/todos`);
+                const todos = await response.json();
+                displayTodos(todos);
+            } catch (error) {
+                console.error('Error loading todos:', error);
+            }
+        }
+
+        async function filterByDeadline() {
+            const deadline = document.getElementById('filterDeadline').value;
+            if (!deadline) {
+                loadTodos();
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/todos/deadline/${deadline}`);
+                const todos = await response.json();
+                displayTodos(todos);
+            } catch (error) {
+                console.error('Error filtering by deadline:', error);
+            }
+        }
+
+        async function filterByArea() {
+            const area = document.getElementById('filterArea').value;
+            if (!area) {
+                loadTodos();
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/todos/area/${area}`);
+                const todos = await response.json();
+                displayTodos(todos);
+            } catch (error) {
+                console.error('Error filtering by area:', error);
+            }
+        }
+
+        function displayTodos(todos) {
+            const todoList = document.getElementById('todoList');
+            todoList.innerHTML = '';
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.className = 'todo-item';
+                li.innerHTML = `
+                    <div class="todo-content">
+                        <h3>${todo.title}</h3>
+                        <p>${todo.description}</p>
+                        <p>Priority: ${getPriorityText(todo.priority)}</p>
+                        <p>Area: ${todo.area}</p>
+                        <p>Deadline: ${new Date(todo.deadline).toLocaleDateString()}</p>
+                        <div class="button-group">
+                            <button onclick="toggleEdit(${todo.id})">Edit</button>
+                            <button onclick="deleteTodo(${todo.id})">Delete</button>
+                        </div>
+                    </div>
+                    <form id="edit-form-${todo.id}" class="edit-form">
+                        <div>
+                            <label>Title:</label>
+                            <input type="text" class="edit-title" value="${todo.title}" required minlength="3">
+                        </div>
+                        <div>
+                            <label>Description:</label>
+                            <textarea class="edit-description" required>${todo.description}</textarea>
+                        </div>
+                        <div>
+                            <label>Priority:</label>
+                            <select class="edit-priority">
+                                <option value="1" ${todo.priority === 1 ? 'selected' : ''}>High</option>
+                                <option value="2" ${todo.priority === 2 ? 'selected' : ''}>Medium</option>
+                                <option value="3" ${todo.priority === 3 ? 'selected' : ''}>Low</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Area:</label>
+                            <select class="edit-area">
+                                <option value="sports" ${todo.area === 'sports' ? 'selected' : ''}>Sports</option>
+                                <option value="university" ${todo.area === 'university' ? 'selected' : ''}>University</option>
+                                <option value="life" ${todo.area === 'life' ? 'selected' : ''}>Life</option>
+                                <option value="work" ${todo.area === 'work' ? 'selected' : ''}>Work</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Deadline:</label>
+                            <input type="date" class="edit-deadline" value="${todo.deadline}" required>
+                        </div>
+                        <div class="button-group">
+                            <button type="button" onclick="updateTodo(${todo.id})">Save</button>
+                            <button type="button" onclick="toggleEdit(${todo.id})">Cancel</button>
+                        </div>
+                    </form>
+                `;
+                todoList.appendChild(li);
+            });
+        }
+
+        function toggleEdit(todoId) {
+            const form = document.getElementById(`edit-form-${todoId}`);
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function updateTodo(todoId) {
+            const form = document.getElementById(`edit-form-${todoId}`);
+            const todoData = {
+                title: form.querySelector('.edit-title').value,
+                description: form.querySelector('.edit-description').value,
+                priority: parseInt(form.querySelector('.edit-priority').value),
+                area: form.querySelector('.edit-area').value,
+                deadline: form.querySelector('.edit-deadline').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/todos/${todoId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(todoData)
+                });
+
+                if (response.ok) {
+                    toggleEdit(todoId);
+                    loadTodos();
+                } else {
+                    console.error('Failed to update todo');
+                }
+            } catch (error) {
+                console.error('Error updating todo:', error);
+            }
+        }
+
+        function getPriorityText(priority) {
+            switch (priority) {
+                case 1: return 'High';
+                case 2: return 'Medium';
+                case 3: return 'Low';
+                default: return 'Unknown';
+            }
+        }
+
+        document.getElementById('todoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const todoData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                priority: parseInt(document.getElementById('priority').value),
+                area: document.getElementById('area').value,
+                deadline: document.getElementById('deadline').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/todos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(todoData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('todoForm').reset();
+                    loadTodos();
+                } else {
+                    console.error('Failed to create todo');
+                }
+            } catch (error) {
+                console.error('Error creating todo:', error);
+            }
+        });
+
+        async function deleteTodo(id) {
+            try {
+                const response = await fetch(`${API_URL}/todos/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    loadTodos();
+                } else {
+                    console.error('Failed to delete todo');
+                }
+            } catch (error) {
+                console.error('Error deleting todo:', error);
+            }
+        }
+    </script>
+</body>
+</html>
