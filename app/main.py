@@ -10,6 +10,17 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 import os
 from dotenv import load_dotenv
+from database import (
+    get_user,
+    create_user,
+    get_todo,
+    get_user_todos,
+    create_todo,
+    update_todo,
+    delete_todo,
+    get_todos_by_deadline,
+    get_todos_by_area,
+)
 
 # Load environment variables
 load_dotenv()
@@ -82,18 +93,18 @@ class TokenData(BaseModel):
 # Todo models with user relationship
 class TodoBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=512)
-    description: str = Field(...)
-    priority: Priority = Field(default=Priority.LOW)
-    area: TodoArea = Field(...)
-    deadline: date = Field(...)
+    description: Optional[str] = Field(None)
+    priority: Optional[Priority] = Field(None)
+    area: Optional[TodoArea] = Field(None)
+    deadline: Optional[date] = Field(None)
 
 
 class TodoCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=512)
-    description: str = Field(...)
-    priority: Priority = Field(default=Priority.LOW)
-    area: TodoArea = Field(...)
-    deadline: date = Field(...)
+    description: Optional[str] = Field(None)
+    priority: Optional[Priority] = Field(None)
+    area: Optional[TodoArea] = Field(None)
+    deadline: Optional[date] = Field(None)
 
 
 class Todo(TodoCreate):
@@ -114,23 +125,19 @@ class TodoUpdate(BaseModel):
     deadline: Optional[date] = Field(None)
 
 
-# In-memory storage
-users_db = []
-todos_db = []
-
-
-def get_user(username: str):
-    for user in users_db:
-        if user.username == username:
-            return user
-    return None
+class TodoFilter(BaseModel):
+    area: Optional[TodoArea] = Field(None)
+    deadline: Optional[date] = Field(None)
+    sort_by_deadline: Optional[bool] = Field(
+        False, description="Sort todos by deadline"
+    )
 
 
 def authenticate_user(username: str, password: str):
     user = get_user(username)
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user["hashed_password"]):
         return False
     return user
 
@@ -180,14 +187,16 @@ async def register(user: UserCreate):
     if get_user(user.username):
         raise HTTPException(status_code=400, detail="Username already registered")
 
-    db_user = UserInDB(
-        id=len(users_db) + 1,
-        email=user.email,
-        username=user.username,
-        hashed_password=get_password_hash(user.password),
-    )
-    users_db.append(db_user)
-    return db_user
+    db_user = {
+        "id": len(get_user_todos(0)) + 1,  # This is a simple way to generate IDs
+        "email": user.email,
+        "username": user.username,
+        "hashed_password": get_password_hash(user.password),
+        "is_active": True,
+        "created_at": datetime.now(),
+    }
+    created_user = create_user(db_user)
+    return created_user
 
 
 @app.post("/api/token", response_model=Token)
@@ -201,7 +210,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user["username"]}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -218,81 +227,127 @@ async def forgot_password(email: str):
 
 # Updated todo endpoints to include user authentication
 @app.post("/api/todos", response_model=Todo)
-async def create_todo(todo: TodoCreate, current_user: User = Depends(get_current_user)):
-    new_todo_id = max([todo.id for todo in todos_db], default=0) + 1
-    new_todo = Todo(
-        id=new_todo_id,
-        user_id=current_user.id,
+async def create_todo_endpoint(
+    todo: TodoCreate, current_user: dict = Depends(get_current_user)
+):
+    new_todo_id = len(get_user_todos(current_user["id"])) + 1
+    new_todo = {
+        "id": new_todo_id,
+        "user_id": current_user["id"],
         **todo.dict(),
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
-    )
-    todos_db.append(new_todo)
-    return new_todo
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+    }
+    created_todo = create_todo(new_todo)
+    return created_todo
 
 
 @app.get("/api/todos", response_model=List[Todo])
-async def list_todos(current_user: User = Depends(get_current_user)):
-    return [todo for todo in todos_db if todo.user_id == current_user.id]
+async def list_todos(
+    current_user: dict = Depends(get_current_user),
+    area: Optional[TodoArea] = None,
+    deadline: Optional[date] = None,
+    sort_by_deadline: bool = False,
+):
+    query = {}
+
+    # Add area filter if provided
+    if area:
+        query["area"] = area.value
+
+    # Add deadline filter if provided
+    if deadline:
+        deadline_date = datetime.combine(deadline, datetime.min.time())
+        query["deadline"] = {
+            "$gte": deadline_date,
+            "$lt": datetime.combine(deadline, datetime.max.time()),
+        }
+
+    # Get todos from database with the query
+    todos = get_user_todos(current_user["id"], query)
+
+    # Sort by deadline if requested
+    if sort_by_deadline:
+        todos.sort(key=lambda x: x.get("deadline", datetime.max) or datetime.max)
+
+    # Convert datetime back to date for response
+    for todo in todos:
+        if isinstance(todo.get("deadline"), datetime):
+            todo["deadline"] = todo["deadline"].date()
+
+    return todos
 
 
 @app.get("/api/todos/{todo_id}", response_model=Todo)
-async def get_todo(todo_id: int, current_user: User = Depends(get_current_user)):
-    for todo in todos_db:
-        if todo.id == todo_id and todo.user_id == current_user.id:
-            return todo
-    raise HTTPException(status_code=404, detail="Todo not found")
+async def get_todo_endpoint(
+    todo_id: int, current_user: dict = Depends(get_current_user)
+):
+    todo = get_todo(todo_id, current_user["id"])
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    # Convert datetime back to date for response
+    if isinstance(todo.get("deadline"), datetime):
+        todo["deadline"] = todo["deadline"].date()
+    return todo
 
 
 @app.put("/api/todos/{todo_id}", response_model=Todo)
-async def update_todo(
+async def update_todo_endpoint(
     todo_id: int,
     todo_update: TodoUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ):
-    for todo in todos_db:
-        if todo.id == todo_id:
-            if todo.user_id != current_user.id:
-                raise HTTPException(
-                    status_code=403, detail="Not authorized to update this todo"
-                )
-            update_data = todo_update.dict(exclude_unset=True)
-            for key, value in update_data.items():
-                setattr(todo, key, value)
-            todo.updated_at = datetime.now()
-            return todo
-    raise HTTPException(status_code=404, detail="Todo not found")
+    todo = get_todo(todo_id, current_user["id"])
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+
+    update_data = todo_update.dict(exclude_unset=True)
+    update_data["updated_at"] = datetime.now()
+
+    updated_todo = update_todo(todo_id, current_user["id"], update_data)
+    if not updated_todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    # Convert datetime back to date for response
+    if isinstance(updated_todo.get("deadline"), datetime):
+        updated_todo["deadline"] = updated_todo["deadline"].date()
+    return updated_todo
 
 
 @app.delete("/api/todos/{todo_id}", response_model=Todo)
-async def delete_todo(todo_id: int, current_user: User = Depends(get_current_user)):
-    for index, todo in enumerate(todos_db):
-        if todo.id == todo_id:
-            if todo.user_id != current_user.id:
-                raise HTTPException(
-                    status_code=403, detail="Not authorized to delete this todo"
-                )
-            return todos_db.pop(index)
-    raise HTTPException(status_code=404, detail="Todo not found")
+async def delete_todo_endpoint(
+    todo_id: int, current_user: dict = Depends(get_current_user)
+):
+    todo = get_todo(todo_id, current_user["id"])
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+
+    if not delete_todo(todo_id, current_user["id"]):
+        raise HTTPException(status_code=404, detail="Todo not found")
+    # Convert datetime back to date for response
+    if isinstance(todo.get("deadline"), datetime):
+        todo["deadline"] = todo["deadline"].date()
+    return todo
 
 
 @app.get("/api/todos/deadline/{deadline_date}", response_model=List[Todo])
-async def get_todos_by_deadline(
-    deadline_date: date, current_user: User = Depends(get_current_user)
+async def get_todos_by_deadline_endpoint(
+    deadline_date: date, current_user: dict = Depends(get_current_user)
 ):
-    return [
-        todo
-        for todo in todos_db
-        if todo.deadline == deadline_date and todo.user_id == current_user.id
-    ]
+    todos = get_todos_by_deadline(deadline_date.isoformat(), current_user["id"])
+    # Convert datetime back to date for response
+    for todo in todos:
+        if isinstance(todo.get("deadline"), datetime):
+            todo["deadline"] = todo["deadline"].date()
+    return todos
 
 
 @app.get("/api/todos/area/{area}", response_model=List[Todo])
-async def get_todos_by_area(
-    area: TodoArea, current_user: User = Depends(get_current_user)
+async def get_todos_by_area_endpoint(
+    area: TodoArea, current_user: dict = Depends(get_current_user)
 ):
-    return [
-        todo
-        for todo in todos_db
-        if todo.area == area and todo.user_id == current_user.id
-    ]
+    todos = get_todos_by_area(area.value, current_user["id"])
+    # Convert datetime back to date for response
+    for todo in todos:
+        if isinstance(todo.get("deadline"), datetime):
+            todo["deadline"] = todo["deadline"].date()
+    return todos
