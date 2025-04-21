@@ -20,6 +20,8 @@ from database import (
     delete_todo,
     get_todos_by_deadline,
     get_todos_by_area,
+    users_collection,
+    todos_collection,
 )
 
 # Load environment variables
@@ -35,13 +37,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
 app = FastAPI()
 
-# Enable CORS
+# Enable CORS with more specific configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # In production, replace with your Flutter app's domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Mount the static directory
@@ -94,6 +97,7 @@ class TokenData(BaseModel):
 class TodoBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=512)
     description: Optional[str] = Field(None)
+    completed: bool = Field(False)
     priority: Optional[Priority] = Field(None)
     area: Optional[TodoArea] = Field(None)
     deadline: Optional[date] = Field(None)
@@ -102,6 +106,7 @@ class TodoBase(BaseModel):
 class TodoCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=512)
     description: Optional[str] = Field(None)
+    completed: bool = Field(False)
     priority: Optional[Priority] = Field(None)
     area: Optional[TodoArea] = Field(None)
     deadline: Optional[date] = Field(None)
@@ -120,6 +125,7 @@ class Todo(TodoCreate):
 class TodoUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=512)
     description: Optional[str] = Field(None)
+    completed: Optional[bool] = Field(None)
     priority: Optional[Priority] = Field(None)
     area: Optional[TodoArea] = Field(None)
     deadline: Optional[date] = Field(None)
@@ -187,8 +193,10 @@ async def register(user: UserCreate):
     if get_user(user.username):
         raise HTTPException(status_code=400, detail="Username already registered")
 
+    # Get the current number of users to generate a new ID
+    users_count = users_collection.count_documents({})
     db_user = {
-        "id": len(get_user_todos(0)) + 1,  # This is a simple way to generate IDs
+        "id": users_count + 1,  # Generate a new ID based on user count
         "email": user.email,
         "username": user.username,
         "hashed_password": get_password_hash(user.password),
@@ -249,7 +257,8 @@ async def list_todos(
     deadline: Optional[date] = None,
     sort_by_deadline: bool = False,
 ):
-    query = {}
+    # Always include user_id in the query
+    query = {"user_id": current_user["id"]}
 
     # Add area filter if provided
     if area:
@@ -297,16 +306,22 @@ async def update_todo_endpoint(
     todo_update: TodoUpdate,
     current_user: dict = Depends(get_current_user),
 ):
+    # First get the todo to ensure it belongs to the current user
     todo = get_todo(todo_id, current_user["id"])
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
 
+    # Convert the update data to a dict, including the completed field
     update_data = todo_update.dict(exclude_unset=True)
+    if 'completed' in update_data:
+        update_data['completed'] = bool(update_data['completed'])
     update_data["updated_at"] = datetime.now()
 
+    # Update the todo
     updated_todo = update_todo(todo_id, current_user["id"], update_data)
     if not updated_todo:
         raise HTTPException(status_code=404, detail="Todo not found")
+
     # Convert datetime back to date for response
     if isinstance(updated_todo.get("deadline"), datetime):
         updated_todo["deadline"] = updated_todo["deadline"].date()
@@ -351,3 +366,8 @@ async def get_todos_by_area_endpoint(
         if isinstance(todo.get("deadline"), datetime):
             todo["deadline"] = todo["deadline"].date()
     return todos
+
+
+@app.get("/api/users/me", response_model=User)
+async def read_users_me(current_user: dict = Depends(get_current_user)):
+    return current_user

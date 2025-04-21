@@ -12,13 +12,26 @@ load_dotenv()
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
 DB_NAME = "taskdo"
 
+print(f"Attempting to connect to MongoDB at: {MONGODB_URL}")  # Debug print
+
 # Create MongoDB client
-client = MongoClient(MONGODB_URL)
+try:
+    client = MongoClient(MONGODB_URL)
+    # Test the connection
+    client.server_info()
+    print("Successfully connected to MongoDB!")  # Debug print
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {str(e)}")  # Debug print
+    raise
+
 db: Database = client[DB_NAME]
 
 # Collections
 users_collection: Collection = db["users"]
 todos_collection: Collection = db["todos"]
+
+print(f"Using database: {DB_NAME}")  # Debug print
+print(f"Collections: {db.list_collection_names()}")  # Debug print
 
 
 def convert_date_to_datetime(data: dict) -> dict:
@@ -79,6 +92,9 @@ def create_todo(todo_data: dict) -> dict:
     """Create a new todo"""
     # Convert date to datetime before storing
     converted_data = convert_date_to_datetime(todo_data)
+    # Ensure completed is a boolean
+    if 'completed' in converted_data:
+        converted_data['completed'] = bool(converted_data['completed'])
     result = todos_collection.insert_one(converted_data)
     converted_data["_id"] = str(result.inserted_id)
     return converted_data
