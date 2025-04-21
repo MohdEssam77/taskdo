@@ -63,32 +63,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                     const SizedBox(height: 20),
-                    const Text(
-                      'Account Statistics',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildStatsCard(
-                      'Total Tasks',
-                      userData?['total_todos']?.toString() ?? '0',
-                      Icons.task_alt,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildStatsCard(
-                      'Completed Tasks',
-                      userData?['completed_todos']?.toString() ?? '0',
-                      Icons.check_circle,
-                    ),
-                    const SizedBox(height: 10),
-                    _buildStatsCard(
-                      'Pending Tasks',
-                      userData?['pending_todos']?.toString() ?? '0',
-                      Icons.pending_actions,
-                    ),
-                    const SizedBox(height: 20),
                     Center(
                       child: ElevatedButton(
                         onPressed: () {
@@ -140,45 +114,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsCard(String label, String value, IconData icon) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: Colors.blue,
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
