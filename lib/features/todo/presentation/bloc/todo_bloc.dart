@@ -1,10 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/todo_repository.dart';
+import '../../domain/entities/todo.dart';
 import 'todo_event.dart';
 import 'todo_state.dart';
 
 class TodoBloc extends Bloc<TodoEvent, TodoState> {
   final TodoRepository _repository;
+  List<Todo> _todos = [];
 
   TodoBloc(this._repository) : super(const TodoInitial()) {
     on<LoadTodos>(_onLoadTodos);
@@ -17,8 +19,8 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
   Future<void> _onLoadTodos(LoadTodos event, Emitter<TodoState> emit) async {
     try {
       emit(const TodoLoading());
-      final todos = await _repository.getTodos();
-      emit(TodoLoaded(todos: todos));
+      _todos = await _repository.getTodos();
+      emit(TodoLoaded(todos: _todos));
     } catch (e) {
       emit(TodoError(e.toString()));
     }
@@ -26,17 +28,9 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
 
   Future<void> _onAddTodo(AddTodo event, Emitter<TodoState> emit) async {
     try {
-      emit(const TodoLoading());
-      final todo = await _repository.createTodo(
-        event.todo.title,
-        event.todo.description,
-        event.todo.priority,
-        event.todo.area,
-        event.todo.deadline,
-      );
-      // After adding a todo, reload the entire list
-      final todos = await _repository.getTodos();
-      emit(TodoLoaded(todos: todos));
+      final todo = await _repository.createTodo(event.todo);
+      _todos = [..._todos, todo];
+      emit(TodoLoaded(todos: _todos));
     } catch (e) {
       emit(TodoError(e.toString()));
     }
@@ -44,11 +38,13 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
 
   Future<void> _onUpdateTodo(UpdateTodo event, Emitter<TodoState> emit) async {
     try {
-      emit(const TodoLoading());
-      await _repository.updateTodo(event.todo);
-      // After updating a todo, reload the entire list
-      final todos = await _repository.getTodos();
-      emit(TodoLoaded(todos: todos));
+      final updatedTodo = await _repository.updateTodo(event.todo);
+      final index = _todos.indexWhere((t) => t.id == updatedTodo.id);
+      if (index != -1) {
+        _todos = List<Todo>.from(_todos);
+        _todos[index] = updatedTodo;
+        emit(TodoLoaded(todos: _todos));
+      }
     } catch (e) {
       emit(TodoError(e.toString()));
     }
@@ -58,9 +54,8 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     try {
       emit(const TodoLoading());
       await _repository.deleteTodo(event.id);
-      // After deleting a todo, reload the entire list
-      final todos = await _repository.getTodos();
-      emit(TodoLoaded(todos: todos));
+      _todos = await _repository.getTodos();
+      emit(TodoLoaded(todos: _todos));
     } catch (e) {
       emit(TodoError('Failed to delete todo: $e'));
     }
@@ -70,9 +65,8 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     try {
       emit(const TodoLoading());
       await _repository.toggleTodo(event.id);
-      // After toggling a todo, reload the entire list
-      final todos = await _repository.getTodos();
-      emit(TodoLoaded(todos: todos));
+      _todos = await _repository.getTodos();
+      emit(TodoLoaded(todos: _todos));
     } catch (e) {
       emit(TodoError(e.toString()));
     }

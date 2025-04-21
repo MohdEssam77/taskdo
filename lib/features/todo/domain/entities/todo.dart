@@ -2,16 +2,16 @@ import 'package:equatable/equatable.dart';
 
 enum TodoPriority { high, medium, low }
 
-enum TodoArea { work, university, life, sports }
+enum TodoArea { sports, university, life, work }
 
 class Todo extends Equatable {
   final int id;
   final String title;
   final String description;
   final bool completed;
-  final TodoPriority priority;
-  final TodoArea area;
-  final DateTime deadline;
+  final TodoPriority? priority;
+  final TodoArea? area;
+  final DateTime? deadline;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -20,19 +20,19 @@ class Todo extends Equatable {
     required this.title,
     required this.description,
     required this.completed,
-    required this.priority,
-    required this.area,
-    required this.deadline,
+    this.priority,
+    this.area,
+    this.deadline,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory Todo.create({
     required String title,
-    required String description,
-    required TodoPriority priority,
-    required TodoArea area,
-    required DateTime deadline,
+    String description = '',
+    TodoPriority? priority,
+    TodoArea? area,
+    DateTime? deadline,
   }) {
     return Todo(
       id: 0, // This will be set by the backend
@@ -53,18 +53,33 @@ class Todo extends Equatable {
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       completed: json['completed'] ?? false,
-      priority: TodoPriority.values.firstWhere(
-        (e) => e.toString().split('.').last == (json['priority']?.toString().toLowerCase() ?? 'medium'),
-        orElse: () => TodoPriority.medium,
-      ),
-      area: TodoArea.values.firstWhere(
-        (e) => e.toString().split('.').last == (json['area']?.toString().toLowerCase() ?? 'life'),
-        orElse: () => TodoArea.life,
-      ),
-      deadline: json['deadline'] != null ? DateTime.parse(json['deadline']) : DateTime.now(),
+      priority: json['priority'] != null
+          ? _numberToPriority(json['priority'])
+          : null,
+      area: json['area'] != null
+          ? TodoArea.values.firstWhere(
+              (e) => e.name.toLowerCase() == json['area'].toString().toLowerCase(),
+              orElse: () => TodoArea.life,
+            )
+          : null,
+      deadline: json['deadline'] != null ? DateTime.parse(json['deadline']) : null,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
     );
+  }
+
+  static TodoPriority _numberToPriority(dynamic value) {
+    final intValue = value is String ? int.parse(value) : value as int;
+    switch (intValue) {
+      case 3:
+        return TodoPriority.high;
+      case 2:
+        return TodoPriority.medium;
+      case 1:
+        return TodoPriority.low;
+      default:
+        return TodoPriority.medium;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -73,9 +88,9 @@ class Todo extends Equatable {
       'title': title,
       'description': description,
       'completed': completed,
-      'priority': priority.toString().split('.').last.toLowerCase(),
-      'area': area.toString().split('.').last.toLowerCase(),
-      'deadline': deadline.toIso8601String(),
+      if (priority != null) 'priority': priority!.name.toLowerCase(),
+      if (area != null) 'area': area!.name.toLowerCase(),
+      if (deadline != null) 'deadline': deadline!.toIso8601String().split('T')[0],
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

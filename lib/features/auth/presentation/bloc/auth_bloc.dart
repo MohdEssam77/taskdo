@@ -19,6 +19,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ForgotPasswordEvent>(_onForgotPassword);
     on<LogoutEvent>(_onLogout);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
+    on<FetchUserDataEvent>(_onFetchUserData);
   }
 
   Future<void> _onLogin(LoginEvent event, Emitter<AuthState> emit) async {
@@ -115,6 +116,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else {
         emit(const AuthUnauthenticated());
       }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onFetchUserData(
+    FetchUserDataEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      final token = _prefs.getString(_tokenKey);
+      if (token == null) {
+        emit(const AuthUnauthenticated());
+        return;
+      }
+
+      final userData = await _authRepository.getUserData(token);
+      emit(AuthAuthenticated(
+        token: token,
+        username: userData['username'] ?? _prefs.getString(_usernameKey) ?? '',
+        email: userData['email'] ?? _prefs.getString(_emailKey) ?? '',
+        userData: userData,
+      ));
     } catch (e) {
       emit(AuthError(e.toString()));
     }

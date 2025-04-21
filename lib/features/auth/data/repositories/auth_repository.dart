@@ -77,4 +77,25 @@ class AuthRepository {
       throw Exception('Failed to send password reset email: $e');
     }
   }
+
+  Future<Map<String, dynamic>> getUserData(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}${AppConfig.userEndpoint}'),
+        headers: {
+          ...AppConfig.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(AppConfig.connectionTimeout);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        final errorBody = json.decode(response.body);
+        throw Exception(errorBody['detail'] ?? 'Failed to fetch user data');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch user data: $e');
+    }
+  }
 } 

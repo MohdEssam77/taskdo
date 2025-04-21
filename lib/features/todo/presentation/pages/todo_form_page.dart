@@ -20,9 +20,9 @@ class _TodoFormPageState extends State<TodoFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
-  TodoPriority _selectedPriority = TodoPriority.medium;
-  TodoArea _selectedArea = TodoArea.life;
+  DateTime? _selectedDate;
+  TodoPriority? _selectedPriority;
+  TodoArea? _selectedArea;
 
   @override
   void initState() {
@@ -46,7 +46,7 @@ class _TodoFormPageState extends State<TodoFormPage> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
       builder: (context, child) {
@@ -69,6 +69,12 @@ class _TodoFormPageState extends State<TodoFormPage> {
         _selectedDate = picked;
       });
     }
+  }
+
+  void _clearDate() {
+    setState(() {
+      _selectedDate = null;
+    });
   }
 
   void _handleSubmit() {
@@ -145,35 +151,49 @@ class _TodoFormPageState extends State<TodoFormPage> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              TextButton(
-                                onPressed: () => _selectDate(context),
-                                style: TextButton.styleFrom(
-                                  backgroundColor: AppTheme.backgroundColor,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.calendar_today,
-                                      color: AppTheme.primaryColor,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                      style: const TextStyle(
-                                        color: AppTheme.textColor,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () => _selectDate(context),
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: AppTheme.backgroundColor,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.calendar_today,
+                                            color: AppTheme.primaryColor,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _selectedDate != null
+                                                ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                                : 'Select Date',
+                                            style: const TextStyle(
+                                              color: AppTheme.textColor,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  if (_selectedDate != null)
+                                    IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: _clearDate,
+                                      color: AppTheme.errorColor,
+                                    ),
+                                ],
                               ),
                             ],
                           ),
@@ -196,7 +216,7 @@ class _TodoFormPageState extends State<TodoFormPage> {
                                   color: AppTheme.backgroundColor,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: DropdownButtonFormField<TodoPriority>(
+                                child: DropdownButtonFormField<TodoPriority?>(
                                   value: _selectedPriority,
                                   dropdownColor: AppTheme.backgroundColor,
                                   decoration: const InputDecoration(
@@ -206,23 +226,32 @@ class _TodoFormPageState extends State<TodoFormPage> {
                                       vertical: 12,
                                     ),
                                   ),
-                                  items: TodoPriority.values.map((priority) {
-                                    return DropdownMenuItem(
-                                      value: priority,
+                                  items: [
+                                    const DropdownMenuItem(
+                                      value: null,
                                       child: Text(
-                                        priority.name.toUpperCase(),
-                                        style: const TextStyle(
+                                        'None',
+                                        style: TextStyle(
                                           color: AppTheme.textColor,
                                         ),
                                       ),
-                                    );
-                                  }).toList(),
+                                    ),
+                                    ...TodoPriority.values.map((priority) {
+                                      return DropdownMenuItem(
+                                        value: priority,
+                                        child: Text(
+                                          priority.name.toUpperCase(),
+                                          style: const TextStyle(
+                                            color: AppTheme.textColor,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ],
                                   onChanged: (value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        _selectedPriority = value;
-                                      });
-                                    }
+                                    setState(() {
+                                      _selectedPriority = value;
+                                    });
                                   },
                                 ),
                               ),
@@ -248,7 +277,7 @@ class _TodoFormPageState extends State<TodoFormPage> {
                             color: AppTheme.backgroundColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: DropdownButtonFormField<TodoArea>(
+                          child: DropdownButtonFormField<TodoArea?>(
                             value: _selectedArea,
                             dropdownColor: AppTheme.backgroundColor,
                             decoration: const InputDecoration(
@@ -258,23 +287,32 @@ class _TodoFormPageState extends State<TodoFormPage> {
                                 vertical: 12,
                               ),
                             ),
-                            items: TodoArea.values.map((area) {
-                              return DropdownMenuItem(
-                                value: area,
+                            items: [
+                              const DropdownMenuItem(
+                                value: null,
                                 child: Text(
-                                  area.name.toUpperCase(),
-                                  style: const TextStyle(
+                                  'None',
+                                  style: TextStyle(
                                     color: AppTheme.textColor,
                                   ),
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                              ...TodoArea.values.map((area) {
+                                return DropdownMenuItem(
+                                  value: area,
+                                  child: Text(
+                                    area.name.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: AppTheme.textColor,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ],
                             onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _selectedArea = value;
-                                });
-                              }
+                              setState(() {
+                                _selectedArea = value;
+                              });
                             },
                           ),
                         ),

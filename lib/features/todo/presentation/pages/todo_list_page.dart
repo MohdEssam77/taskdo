@@ -19,6 +19,7 @@ class TodoListPage extends StatefulWidget {
 class _TodoListPageState extends State<TodoListPage> {
   bool _showCompleted = true;
   TodoArea? _selectedArea;
+  DateTime? _selectedDeadline;
 
   @override
   void initState() {
@@ -39,6 +40,26 @@ class _TodoListPageState extends State<TodoListPage> {
       context: context,
       builder: (context) => TodoFormPage(todo: todo),
     );
+  }
+
+  Future<void> _selectDeadline(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDeadline ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && picked != _selectedDeadline) {
+      setState(() {
+        _selectedDeadline = picked;
+      });
+    }
+  }
+
+  void _clearDeadlineFilter() {
+    setState(() {
+      _selectedDeadline = null;
+    });
   }
 
   @override
@@ -81,6 +102,34 @@ class _TodoListPageState extends State<TodoListPage> {
               children: [
                 _buildCategoryTab(null, 'All'),
                 ...TodoArea.values.map((area) => _buildCategoryTab(area, area.name.toUpperCase())).toList(),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _selectDeadline(context),
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      _selectedDeadline != null
+                          ? '${_selectedDeadline!.day}/${_selectedDeadline!.month}/${_selectedDeadline!.year}'
+                          : 'Filter by Deadline',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                if (_selectedDeadline != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: _clearDeadlineFilter,
+                    color: AppTheme.errorColor,
+                  ),
               ],
             ),
           ),
@@ -134,9 +183,27 @@ class _TodoListPageState extends State<TodoListPage> {
                     if (_selectedArea != null && todo.area != _selectedArea) {
                       return false;
                     }
+                    if (_selectedDeadline != null && todo.deadline != null) {
+                      final todoDate = DateTime(
+                        todo.deadline!.year,
+                        todo.deadline!.month,
+                        todo.deadline!.day,
+                      );
+                      final selectedDate = DateTime(
+                        _selectedDeadline!.year,
+                        _selectedDeadline!.month,
+                        _selectedDeadline!.day,
+                      );
+                      return todoDate == selectedDate;
+                    }
                     return true;
                   }).toList()
-                    ..sort((a, b) => a.deadline.compareTo(b.deadline));
+                    ..sort((a, b) {
+                      if (a.deadline == null && b.deadline == null) return 0;
+                      if (a.deadline == null) return 1;
+                      if (b.deadline == null) return -1;
+                      return a.deadline!.compareTo(b.deadline!);
+                    });
 
                   if (todos.isEmpty) {
                     return Center(
@@ -213,24 +280,90 @@ class _TodoListPageState extends State<TodoListPage> {
                               size: 20,
                             ),
                           ),
-                          title: Text(
-                            todo.title,
-                            style: TextStyle(
-                              decoration: todo.completed
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                              color: todo.completed
-                                  ? AppTheme.secondaryTextColor
-                                  : AppTheme.textColor,
-                              fontSize: 16,
-                            ),
+                          title: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                todo.title,
+                                style: TextStyle(
+                                  decoration: todo.completed
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: todo.completed
+                                      ? AppTheme.secondaryTextColor
+                                      : AppTheme.textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (todo.description != null && todo.description!.isNotEmpty)
+                                Text(
+                                  todo.description!,
+                                  style: TextStyle(
+                                    color: AppTheme.secondaryTextColor,
+                                    fontSize: 14,
+                                    decoration: todo.completed
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
                           ),
-                          subtitle: Text(
-                            '${todo.deadline.day}/${todo.deadline.month}/${todo.deadline.year}',
-                            style: const TextStyle(
-                              color: AppTheme.secondaryTextColor,
-                              fontSize: 14,
-                            ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: AppTheme.secondaryTextColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatDate(todo.deadline),
+                                    style: const TextStyle(
+                                      color: AppTheme.secondaryTextColor,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.category,
+                                    size: 14,
+                                    color: AppTheme.secondaryTextColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatArea(todo.area),
+                                    style: const TextStyle(
+                                      color: AppTheme.secondaryTextColor,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.priority_high,
+                                    size: 14,
+                                    color: _getPriorityColor(todo.priority),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatPriority(todo.priority),
+                                    style: TextStyle(
+                                      color: _getPriorityColor(todo.priority),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.edit),
@@ -292,5 +425,32 @@ class _TodoListPageState extends State<TodoListPage> {
         ),
       ),
     );
+  }
+
+  Color _getPriorityColor(TodoPriority? priority) {
+    if (priority == null) return Colors.grey;
+    switch (priority) {
+      case TodoPriority.high:
+        return Colors.red;
+      case TodoPriority.medium:
+        return Colors.orange;
+      case TodoPriority.low:
+        return Colors.green;
+    }
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'No deadline';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatArea(TodoArea? area) {
+    if (area == null) return 'No category';
+    return area.name.toUpperCase();
+  }
+
+  String _formatPriority(TodoPriority? priority) {
+    if (priority == null) return 'No priority';
+    return priority.name.toUpperCase();
   }
 } 

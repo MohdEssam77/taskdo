@@ -50,4 +50,8 @@ class LogoutEvent extends AuthEvent {
 
 class CheckAuthStatusEvent extends AuthEvent {
   const CheckAuthStatusEvent();
+}
+
+class FetchUserDataEvent extends AuthEvent {
+  const FetchUserDataEvent();
 } 

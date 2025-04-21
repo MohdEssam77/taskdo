@@ -19,15 +19,17 @@ class AuthAuthenticated extends AuthState {
   final String token;
   final String username;
   final String email;
+  final Map<String, dynamic>? userData;
 
   const AuthAuthenticated({
     required this.token,
     required this.username,
     required this.email,
+    this.userData,
   });
 
   @override
-  List<Object?> get props => [token, username, email];
+  List<Object?> get props => [token, username, email, userData];
 }
 
 class AuthUnauthenticated extends AuthState {

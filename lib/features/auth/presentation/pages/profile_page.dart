@@ -4,15 +4,26 @@ import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch user data when the page is opened
+    context.read<AuthBloc>().add(const FetchUserDataEvent());
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
-          // Pop all routes until we reach the root (login page)
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
       },
@@ -23,11 +34,12 @@ class ProfilePage extends StatelessWidget {
         body: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             if (state is AuthAuthenticated) {
-              // Get username and email from the auth state
-              final username = state.username ?? 'Unknown';
-              final email = state.email ?? 'Unknown';
+              final userData = state.userData;
+              final createdAt = userData?['created_at'] != null
+                  ? DateTime.parse(userData!['created_at'])
+                  : null;
 
-              return Padding(
+              return SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,9 +52,42 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildInfoCard('Username', username),
+                    _buildInfoCard('Username', state.username),
                     const SizedBox(height: 10),
-                    _buildInfoCard('Email', email),
+                    _buildInfoCard('Email', state.email),
+                    if (createdAt != null) ...[
+                      const SizedBox(height: 10),
+                      _buildInfoCard(
+                        'Member Since',
+                        '${createdAt.day}/${createdAt.month}/${createdAt.year}',
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Account Statistics',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildStatsCard(
+                      'Total Tasks',
+                      userData?['total_todos']?.toString() ?? '0',
+                      Icons.task_alt,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStatsCard(
+                      'Completed Tasks',
+                      userData?['completed_todos']?.toString() ?? '0',
+                      Icons.check_circle,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStatsCard(
+                      'Pending Tasks',
+                      userData?['pending_todos']?.toString() ?? '0',
+                      Icons.pending_actions,
+                    ),
                     const SizedBox(height: 20),
                     Center(
                       child: ElevatedButton(
@@ -95,6 +140,45 @@ class ProfilePage extends StatelessWidget {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsCard(String label, String value, IconData icon) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: Colors.blue,
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

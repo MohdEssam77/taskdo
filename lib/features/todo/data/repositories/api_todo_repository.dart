@@ -37,23 +37,18 @@ class ApiTodoRepository implements TodoRepository {
   }
 
   @override
-  Future<Todo> createTodo(
-    String title,
-    String description,
-    TodoPriority priority,
-    TodoArea area,
-    DateTime deadline,
-  ) async {
+  Future<Todo> createTodo(Todo todo) async {
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.baseUrl}${AppConfig.todosEndpoint}'),
         headers: _headers,
         body: json.encode({
-          'title': title,
-          'description': description,
-          'priority': priority.index + 1,
-          'area': area.toString().split('.').last.toLowerCase(),
-          'deadline': deadline.toIso8601String().split('T')[0],
+          'title': todo.title,
+          'description': todo.description,
+          'completed': todo.completed,
+          if (todo.priority != null) 'priority': _priorityToNumber(todo.priority!),
+          if (todo.area != null) 'area': todo.area!.name.toLowerCase(),
+          if (todo.deadline != null) 'deadline': todo.deadline!.toIso8601String().split('T')[0],
         }),
       ).timeout(AppConfig.connectionTimeout);
 
@@ -78,9 +73,9 @@ class ApiTodoRepository implements TodoRepository {
           'title': todo.title,
           'description': todo.description,
           'completed': todo.completed,
-          'priority': todo.priority.index + 1,
-          'area': todo.area.toString().split('.').last.toLowerCase(),
-          'deadline': todo.deadline.toIso8601String().split('T')[0],
+          if (todo.priority != null) 'priority': _priorityToNumber(todo.priority!),
+          if (todo.area != null) 'area': todo.area!.name.toLowerCase(),
+          if (todo.deadline != null) 'deadline': todo.deadline!.toIso8601String().split('T')[0],
           'updated_at': DateTime.now().toIso8601String(),
         }),
       ).timeout(AppConfig.connectionTimeout);
@@ -145,6 +140,17 @@ class ApiTodoRepository implements TodoRepository {
       }
     } catch (e) {
       throw Exception('Failed to toggle todo: $e');
+    }
+  }
+
+  int _priorityToNumber(TodoPriority priority) {
+    switch (priority) {
+      case TodoPriority.high:
+        return 3;
+      case TodoPriority.medium:
+        return 2;
+      case TodoPriority.low:
+        return 1;
     }
   }
 } 
