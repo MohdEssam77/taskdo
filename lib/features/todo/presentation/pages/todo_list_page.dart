@@ -177,13 +177,23 @@ class _TodoListPageState extends State<TodoListPage> {
 
                 if (state is TodoLoaded) {
                   final todos = state.todos.where((todo) {
+                    // Filter by completion status
                     if (!_showCompleted && todo.completed) {
                       return false;
                     }
+                    
+                    // Filter by area
                     if (_selectedArea != null && todo.area != _selectedArea) {
                       return false;
                     }
-                    if (_selectedDeadline != null && todo.deadline != null) {
+                    
+                    // Filter by deadline
+                    if (_selectedDeadline != null) {
+                      // If todo has no deadline, don't show it when filtering by date
+                      if (todo.deadline == null) {
+                        return false;
+                      }
+                      
                       final todoDate = DateTime(
                         todo.deadline!.year,
                         todo.deadline!.month,
@@ -194,8 +204,9 @@ class _TodoListPageState extends State<TodoListPage> {
                         _selectedDeadline!.month,
                         _selectedDeadline!.day,
                       );
-                      return todoDate == selectedDate;
+                      return todoDate.isAtSameMomentAs(selectedDate);
                     }
+                    
                     return true;
                   }).toList()
                     ..sort((a, b) {
