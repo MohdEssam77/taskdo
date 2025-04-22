@@ -79,14 +79,27 @@ class _TodoFormPageState extends State<TodoFormPage> {
 
   void _handleSubmit() {
     if (_formKey.currentState!.validate()) {
-      final todo = Todo.create(
-        title: _titleController.text,
-        description: _descriptionController.text,
-        priority: _selectedPriority,
-        area: _selectedArea,
-        deadline: _selectedDate,
-      );
-      context.read<TodoBloc>().add(AddTodo(todo));
+      if (widget.todo != null) {
+        // Update existing todo
+        final updatedTodo = widget.todo!.copyWith(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          priority: _selectedPriority,
+          area: _selectedArea,
+          deadline: _selectedDate,
+        );
+        context.read<TodoBloc>().add(UpdateTodo(updatedTodo));
+      } else {
+        // Create new todo
+        final todo = Todo.create(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          priority: _selectedPriority,
+          area: _selectedArea,
+          deadline: _selectedDate,
+        );
+        context.read<TodoBloc>().add(AddTodo(todo));
+      }
       Navigator.pop(context);
     }
   }

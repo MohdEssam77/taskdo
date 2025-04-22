@@ -45,7 +45,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onRegister(RegisterEvent event, Emitter<AuthState> emit) async {
     try {
       emit(const AuthLoading());
-      // First register the user
+      // Register the user
       await _authRepository.register(
         event.username,
         event.email,
@@ -56,18 +56,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _prefs.setString(_emailKey, event.email);
       // Emit registration success state
       emit(const RegistrationSuccess());
-      // Then attempt to log in
-      final response = await _authRepository.login(
-        event.username,
-        event.password,
-      );
-      final token = response['access_token'] as String;
-      await _prefs.setString(_tokenKey, token);
-      emit(AuthAuthenticated(
-        token: token,
-        username: event.username,
-        email: event.email,
-      ));
     } catch (e) {
       emit(AuthError(e.toString()));
     }

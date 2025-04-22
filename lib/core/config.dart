@@ -12,6 +12,7 @@ class AppConfig {
   static const String forgotPasswordEndpoint = '/api/forgot-password';
   static const String todosEndpoint = '/api/todos';
   static const String userEndpoint = '/api/users/me';
+  static const String searchEndpoint = '/api/todos/search';
 
   // Headers
   static const Map<String, String> defaultHeaders = {

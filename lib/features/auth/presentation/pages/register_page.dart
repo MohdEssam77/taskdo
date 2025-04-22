@@ -170,6 +170,19 @@ class _RegisterPageState extends State<RegisterPage> {
                                 backgroundColor: AppTheme.errorColor,
                               ),
                             );
+                          } else if (state is RegistrationSuccess) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Registration successful! Please login.'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginPage(),
+                              ),
+                            );
                           }
                         },
                         builder: (context, state) {

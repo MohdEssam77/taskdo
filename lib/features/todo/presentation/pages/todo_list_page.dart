@@ -8,6 +8,7 @@ import '../bloc/todo_event.dart';
 import '../bloc/todo_state.dart';
 import 'todo_form_page.dart';
 import 'package:taskdo/features/auth/presentation/pages/profile_page.dart';
+import 'dart:async';
 
 class TodoListPage extends StatefulWidget {
   const TodoListPage({Key? key}) : super(key: key);
@@ -20,11 +21,31 @@ class _TodoListPageState extends State<TodoListPage> {
   bool _showCompleted = true;
   TodoArea? _selectedArea;
   DateTime? _selectedDeadline;
+  final _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     context.read<TodoBloc>().add(const LoadTodos());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (query.isEmpty) {
+        context.read<TodoBloc>().add(const LoadTodos());
+      } else {
+        context.read<TodoBloc>().add(SearchTodos(query));
+      }
+    });
   }
 
   void _toggleTodo(int id) {
@@ -94,6 +115,22 @@ class _TodoListPageState extends State<TodoListPage> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search todos...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: AppTheme.backgroundColor,
+              ),
+              onChanged: _onSearchChanged,
+            ),
+          ),
           Container(
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 16),

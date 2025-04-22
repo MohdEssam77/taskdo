@@ -5,6 +5,7 @@ from typing import Optional, List, Dict, Any
 import os
 from dotenv import load_dotenv
 from datetime import datetime, date
+import re
 
 load_dotenv()
 
@@ -104,12 +105,22 @@ def update_todo(todo_id: int, user_id: int, update_data: dict) -> Optional[dict]
     """Update a todo"""
     # Convert date to datetime before updating
     converted_data = convert_date_to_datetime(update_data)
-    result = todos_collection.find_one_and_update(
+    
+    # First verify the todo exists and belongs to the user
+    existing_todo = todos_collection.find_one({"id": todo_id, "user_id": user_id})
+    if not existing_todo:
+        return None
+        
+    # Update the todo with the new data
+    result = todos_collection.update_one(
         {"id": todo_id, "user_id": user_id},
-        {"$set": converted_data},
-        return_document=True,
+        {"$set": converted_data}
     )
-    return result
+    
+    # Return the updated todo
+    if result.modified_count > 0:
+        return todos_collection.find_one({"id": todo_id, "user_id": user_id})
+    return None
 
 
 def delete_todo(todo_id: int, user_id: int) -> bool:
@@ -138,3 +149,45 @@ def get_todos_by_deadline(deadline: str, user_id: int) -> list:
 def get_todos_by_area(area: str, user_id: int) -> list:
     """Get todos by area"""
     return list(todos_collection.find({"area": area, "user_id": user_id}))
+
+
+def check_user_todos(user_id: int) -> bool:
+    """Check if a user has any todos"""
+    try:
+        count = todos_collection.count_documents({"user_id": user_id})
+        print(f"User {user_id} has {count} todos")
+        return count > 0
+    except Exception as e:
+        print(f"Error checking user todos: {str(e)}")
+        return False
+
+
+def search_todos(query: str, user_id: int) -> List[dict]:
+    """Search todos by title or description"""
+    try:
+        print(f"=== Database Search ===")
+        print(f"Query: {query}")
+        print(f"User ID: {user_id}")
+        
+        # Build the search query
+        search_query = {
+            "user_id": user_id,
+            "$or": [
+                {"title": {"$regex": query, "$options": "i"}},
+                {"description": {"$regex": query, "$options": "i"}}
+            ]
+        }
+        
+        # Execute the query
+        result = list(todos_collection.find(search_query))
+        print(f"Found {len(result)} matching todos")
+        
+        if not result:
+            print("No todos found matching the search criteria")
+            return []
+            
+        print(f"=== Database Search Complete ===")
+        return result
+    except Exception as e:
+        print(f"Error in search_todos: {str(e)}")
+        raise Exception(f"Failed to search todos: {str(e)}")
