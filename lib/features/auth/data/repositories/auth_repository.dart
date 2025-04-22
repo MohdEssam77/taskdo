@@ -42,9 +42,7 @@ class AuthRepository {
       ).timeout(AppConfig.connectionTimeout);
 
       if (response.statusCode == 200) {
-        final responseBody = json.decode(response.body);
-        // After successful registration, automatically log in
-        return await login(username, password);
+        return json.decode(response.body);
       } else {
         final errorBody = json.decode(response.body);
         final errorMessage = errorBody['detail'] ?? 'Failed to register';

@@ -143,6 +143,25 @@ class ApiTodoRepository implements TodoRepository {
     }
   }
 
+  @override
+  Future<List<Todo>> searchTodos(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}${AppConfig.todosEndpoint}/search?query=$query'),
+        headers: _headers,
+      ).timeout(AppConfig.connectionTimeout);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Todo.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to search todos: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Failed to search todos: $e');
+    }
+  }
+
   int _priorityToNumber(TodoPriority priority) {
     switch (priority) {
       case TodoPriority.high:

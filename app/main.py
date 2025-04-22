@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +22,7 @@ from database import (
     get_todos_by_area,
     users_collection,
     todos_collection,
+    search_todos,
 )
 
 # Load environment variables
@@ -37,15 +38,23 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
 app = FastAPI()
 
-# Enable CORS with more specific configuration
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your Flutter app's domain
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
+
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"Received request: {request.method} {request.url}")
+    print(f"Headers: {request.headers}")
+    response = await call_next(request)
+    print(f"Response status: {response.status_code}")
+    return response
 
 # Mount the static directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -287,6 +296,49 @@ async def list_todos(
     return todos
 
 
+@app.get("/api/todos/search", response_model=List[Todo])
+async def search_todos_endpoint(
+    current_user: dict = Depends(get_current_user),
+    query: str = None,
+):
+    """Search todos by title or description"""
+    try:
+        print(f"=== Search Request ===")
+        print(f"Query: {query}")
+        print(f"User ID: {current_user['id']}")
+        
+        # If no query provided, return all todos
+        if not query:
+            return await list_todos(current_user=current_user)
+        
+        # Build the search query
+        search_query = {
+            "user_id": current_user["id"],
+            "$or": [
+                {"title": {"$regex": query, "$options": "i"}},
+                {"description": {"$regex": query, "$options": "i"}}
+            ]
+        }
+        
+        # Get todos from database with the query
+        todos = get_user_todos(current_user["id"], search_query)
+        
+        # Convert datetime back to date for response
+        for todo in todos:
+            if isinstance(todo.get("deadline"), datetime):
+                todo["deadline"] = todo["deadline"].date()
+                
+        print(f"=== Search Complete ===")
+        print(f"Found {len(todos)} matching todos")
+        return todos
+    except Exception as e:
+        print(f"Error in search endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to search todos: {str(e)}"
+        )
+
+
 @app.get("/api/todos/{todo_id}", response_model=Todo)
 async def get_todo_endpoint(
     todo_id: int, current_user: dict = Depends(get_current_user)
@@ -371,3 +423,10 @@ async def get_todos_by_area_endpoint(
 @app.get("/api/users/me", response_model=User)
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+@app.get("/api/test")
+async def test_endpoint():
+    """Test endpoint to verify server connectivity"""
+    print("Test endpoint called")
+    return {"message": "Server is working!"}

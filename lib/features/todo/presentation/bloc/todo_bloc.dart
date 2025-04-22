@@ -14,6 +14,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     on<UpdateTodo>(_onUpdateTodo);
     on<DeleteTodo>(_onDeleteTodo);
     on<ToggleTodo>(_onToggleTodo);
+    on<SearchTodos>(_onSearchTodos);
   }
 
   Future<void> _onLoadTodos(LoadTodos event, Emitter<TodoState> emit) async {
@@ -66,6 +67,16 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
       emit(const TodoLoading());
       await _repository.toggleTodo(event.id);
       _todos = await _repository.getTodos();
+      emit(TodoLoaded(todos: _todos));
+    } catch (e) {
+      emit(TodoError(e.toString()));
+    }
+  }
+
+  Future<void> _onSearchTodos(SearchTodos event, Emitter<TodoState> emit) async {
+    try {
+      emit(const TodoLoading());
+      _todos = await _repository.searchTodos(event.query);
       emit(TodoLoaded(todos: _todos));
     } catch (e) {
       emit(TodoError(e.toString()));
