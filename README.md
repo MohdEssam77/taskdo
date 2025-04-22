@@ -18,3 +18,11 @@ Welcome to the PCC coding task! Your task is to build a simple **Todo Management
 - Additional features (e.g., filtering, etc.) are welcome and encouraged!
 
 Please fork this repository and add a PR once you're done :)
+
+
+
+For running it 
+1)open docker desktop and in the terminal run
+docker-compose up --build
+2)Then once it is done in the browser open the following link 
+http://localhost:8080
