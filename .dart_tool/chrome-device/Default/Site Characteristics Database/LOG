@@ -1,9 +1,35 @@
-2025/04/22-06:15:19.535 8730 Reusing MANIFEST C:\Users\moham\AppData\Local\Temp\flutter_tools.543d3d5a\flutter_tools_chrome_device.68a9db71\Default\Site Characteristics Database/MANIFEST-000001
-2025/04/22-06:15:19.536 8730 Recovering log #15
-2025/04/22-06:15:19.536 8730 Reusing old log C:\Users\moham\AppData\Local\Temp\flutter_tools.543d3d5a\flutter_tools_chrome_device.68a9db71\Default\Site Characteristics Database/000015.log 
-2025/04/22-06:15:19.537 8730 Delete type=0 #3
-2025/04/22-06:15:19.537 8730 Delete type=2 #4
-2025/04/22-06:15:19.537 8730 Delete type=0 #6
-2025/04/22-06:15:19.537 8730 Delete type=2 #7
-2025/04/22-06:15:19.537 8730 Delete type=2 #8
-2025/04/22-06:15:19.537 8730 Delete type=0 #10
+2025/04/22-15:37:17.690 4d14 Reusing MANIFEST C:\Users\moham\AppData\Local\Temp\flutter_tools.35742e92\flutter_tools_chrome_device.76bcf7ad\Default\Site Characteristics Database/MANIFEST-000001
+2025/04/22-15:37:17.691 4d14 Recovering log #3
+2025/04/22-15:37:17.692 4d14 Level-0 table #29: started
+2025/04/22-15:37:17.696 4d14 Level-0 table #29: 365 bytes OK
+2025/04/22-15:37:17.696 4d14 Recovering log #6
+2025/04/22-15:37:17.697 4d14 Level-0 table #30: started
+2025/04/22-15:37:17.700 4d14 Level-0 table #30: 165 bytes OK
+2025/04/22-15:37:17.701 4d14 Recovering log #10
+2025/04/22-15:37:17.701 4d14 Level-0 table #31: started
+2025/04/22-15:37:17.705 4d14 Level-0 table #31: 165 bytes OK
+2025/04/22-15:37:17.705 4d14 Recovering log #15
+2025/04/22-15:37:17.705 4d14 Level-0 table #32: started
+2025/04/22-15:37:17.708 4d14 Level-0 table #32: 398 bytes OK
+2025/04/22-15:37:17.708 4d14 Recovering log #26
+2025/04/22-15:37:17.709 4d14 Reusing old log C:\Users\moham\AppData\Local\Temp\flutter_tools.35742e92\flutter_tools_chrome_device.76bcf7ad\Default\Site Characteristics Database/000026.log 
+2025/04/22-15:37:17.710 4d14 Delete type=0 #3
+2025/04/22-15:37:17.710 4d14 Delete type=2 #4
+2025/04/22-15:37:17.710 4d14 Delete type=0 #6
+2025/04/22-15:37:17.710 4d14 Delete type=2 #7
+2025/04/22-15:37:17.710 4d14 Delete type=2 #8
+2025/04/22-15:37:17.710 4d14 Delete type=0 #10
+2025/04/22-15:37:17.710 4d14 Delete type=0 #15
+2025/04/22-15:37:17.710 4d14 Delete type=2 #16
+2025/04/22-15:37:17.710 4d14 Delete type=2 #18
+2025/04/22-15:37:17.710 4d14 Delete type=2 #19
+2025/04/22-15:37:17.710 4d14 Delete type=2 #20
+2025/04/22-15:37:17.713 755c Compacting 4@0 + 1@1 files
+2025/04/22-15:37:17.715 755c Generated table #33@0: 2 keys, 194 bytes
+2025/04/22-15:37:17.715 755c Compacted 4@0 + 1@1 files => 194 bytes
+2025/04/22-15:37:17.716 755c compacted to: files[ 0 1 0 0 0 0 0 ]
+2025/04/22-15:37:17.717 755c Delete type=2 #27
+2025/04/22-15:37:17.717 755c Delete type=2 #29
+2025/04/22-15:37:17.717 755c Delete type=2 #30
+2025/04/22-15:37:17.717 755c Delete type=2 #31
+2025/04/22-15:37:17.717 755c Delete type=2 #32
