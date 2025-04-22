@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from enum import IntEnum, Enum
 from typing import List, Optional
@@ -56,10 +55,6 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     print(f"Response status: {response.status_code}")
     return response
-
-
-# Mount the static directory
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 class Priority(IntEnum):
