@@ -47,6 +47,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -55,6 +56,7 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     print(f"Response status: {response.status_code}")
     return response
+
 
 # Mount the static directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -306,37 +308,34 @@ async def search_todos_endpoint(
         print(f"=== Search Request ===")
         print(f"Query: {query}")
         print(f"User ID: {current_user['id']}")
-        
+
         # If no query provided, return all todos
         if not query:
             return await list_todos(current_user=current_user)
-        
+
         # Build the search query
         search_query = {
             "user_id": current_user["id"],
             "$or": [
                 {"title": {"$regex": query, "$options": "i"}},
-                {"description": {"$regex": query, "$options": "i"}}
-            ]
+                {"description": {"$regex": query, "$options": "i"}},
+            ],
         }
-        
+
         # Get todos from database with the query
         todos = get_user_todos(current_user["id"], search_query)
-        
+
         # Convert datetime back to date for response
         for todo in todos:
             if isinstance(todo.get("deadline"), datetime):
                 todo["deadline"] = todo["deadline"].date()
-                
+
         print(f"=== Search Complete ===")
         print(f"Found {len(todos)} matching todos")
         return todos
     except Exception as e:
         print(f"Error in search endpoint: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to search todos: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to search todos: {str(e)}")
 
 
 @app.get("/api/todos/{todo_id}", response_model=Todo)
@@ -365,8 +364,15 @@ async def update_todo_endpoint(
 
     # Convert the update data to a dict, including the completed field
     update_data = todo_update.dict(exclude_unset=True)
-    if 'completed' in update_data:
-        update_data['completed'] = bool(update_data['completed'])
+
+    # Handle priority conversion if present
+    if "priority" in update_data and update_data["priority"] is not None:
+        update_data["priority"] = update_data["priority"].value
+
+    # Ensure completed is a boolean
+    if "completed" in update_data:
+        update_data["completed"] = bool(update_data["completed"])
+
     update_data["updated_at"] = datetime.now()
 
     # Update the todo

@@ -94,8 +94,8 @@ def create_todo(todo_data: dict) -> dict:
     # Convert date to datetime before storing
     converted_data = convert_date_to_datetime(todo_data)
     # Ensure completed is a boolean
-    if 'completed' in converted_data:
-        converted_data['completed'] = bool(converted_data['completed'])
+    if "completed" in converted_data:
+        converted_data["completed"] = bool(converted_data["completed"])
     result = todos_collection.insert_one(converted_data)
     converted_data["_id"] = str(result.inserted_id)
     return converted_data
@@ -105,18 +105,21 @@ def update_todo(todo_id: int, user_id: int, update_data: dict) -> Optional[dict]
     """Update a todo"""
     # Convert date to datetime before updating
     converted_data = convert_date_to_datetime(update_data)
-    
+
     # First verify the todo exists and belongs to the user
     existing_todo = todos_collection.find_one({"id": todo_id, "user_id": user_id})
     if not existing_todo:
         return None
-        
-    # Update the todo with the new data
+
+    # Merge the existing todo with the update data to preserve fields not included in the update
+    merged_data = existing_todo.copy()
+    merged_data.update(converted_data)
+
+    # Update the todo with the merged data
     result = todos_collection.update_one(
-        {"id": todo_id, "user_id": user_id},
-        {"$set": converted_data}
+        {"id": todo_id, "user_id": user_id}, {"$set": converted_data}
     )
-    
+
     # Return the updated todo
     if result.modified_count > 0:
         return todos_collection.find_one({"id": todo_id, "user_id": user_id})
@@ -168,24 +171,24 @@ def search_todos(query: str, user_id: int) -> List[dict]:
         print(f"=== Database Search ===")
         print(f"Query: {query}")
         print(f"User ID: {user_id}")
-        
+
         # Build the search query
         search_query = {
             "user_id": user_id,
             "$or": [
                 {"title": {"$regex": query, "$options": "i"}},
-                {"description": {"$regex": query, "$options": "i"}}
-            ]
+                {"description": {"$regex": query, "$options": "i"}},
+            ],
         }
-        
+
         # Execute the query
         result = list(todos_collection.find(search_query))
         print(f"Found {len(result)} matching todos")
-        
+
         if not result:
             print("No todos found matching the search criteria")
             return []
-            
+
         print(f"=== Database Search Complete ===")
         return result
     except Exception as e:

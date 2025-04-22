@@ -165,11 +165,11 @@ class ApiTodoRepository implements TodoRepository {
   int _priorityToNumber(TodoPriority priority) {
     switch (priority) {
       case TodoPriority.high:
-        return 3;
+        return 1;
       case TodoPriority.medium:
         return 2;
       case TodoPriority.low:
-        return 1;
+        return 3;
     }
   }
 } 
