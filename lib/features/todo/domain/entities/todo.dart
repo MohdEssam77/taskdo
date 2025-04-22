@@ -71,11 +71,11 @@ class Todo extends Equatable {
   static TodoPriority _numberToPriority(dynamic value) {
     final intValue = value is String ? int.parse(value) : value as int;
     switch (intValue) {
-      case 3:
+      case 1:
         return TodoPriority.high;
       case 2:
         return TodoPriority.medium;
-      case 1:
+      case 3:
         return TodoPriority.low;
       default:
         return TodoPriority.medium;
